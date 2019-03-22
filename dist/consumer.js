@@ -55,6 +55,7 @@ class Consumer extends events_1.EventEmitter {
         assertOptions(options);
         this.queueUrl = options.queueUrl;
         this.handleMessage = options.handleMessage;
+        this.handleMessageBatch = options.handleMessageBatch;
         this.handleMessageTimeout = options.handleMessageTimeout;
         this.attributeNames = options.attributeNames || [];
         this.messageAttributeNames = options.messageAttributeNames || [];
