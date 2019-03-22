@@ -106,6 +106,7 @@ export class Consumer extends EventEmitter {
 
     this.queueUrl = options.queueUrl;
     this.handleMessage = options.handleMessage;
+    this.handleMessageBatch = options.handleMessageBatch;
     this.handleMessageTimeout = options.handleMessageTimeout;
     this.attributeNames = options.attributeNames || [];
     this.messageAttributeNames = options.messageAttributeNames || [];
