@@ -339,6 +339,7 @@ export class Consumer extends EventEmitter {
     const params = {
       QueueUrl: this.queueUrl,
       Entries: messages.map((message) => ({
+        Id: message.MessageId,
         ReceiptHandle: message.ReceiptHandle,
         VisibilityTimeout: 0
       }))
