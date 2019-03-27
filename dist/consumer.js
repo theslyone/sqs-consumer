@@ -87,6 +87,7 @@ class Consumer extends events_1.EventEmitter {
     stop() {
         debug("Stopping consumer");
         this.stopped = true;
+        this.emit("stopped");
     }
     async handleSqsResponse(response) {
         debug("Received SQS response");

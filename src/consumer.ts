@@ -148,6 +148,7 @@ export class Consumer extends EventEmitter {
   public stop(): void {
     debug("Stopping consumer");
     this.stopped = true;
+    this.emit("stopped");
   }
 
   private async handleSqsResponse(
