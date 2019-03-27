@@ -1,14 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const debug = require('debug')('sqs-consumer');
+const debug = require("debug")("sqs-consumer");
 const SQS = require("aws-sdk/clients/sqs");
 const events_1 = require("events");
 const bind_1 = require("./bind");
 const errors_1 = require("./errors");
 const requiredOptions = [
-    'queueUrl',
+    "queueUrl",
     // only one of handleMessage / handleMessagesBatch is required
-    'handleMessage|handleMessagesBatch'
+    "handleMessage|handleMessagesBatch"
 ];
 function createTimeout(duration) {
     let timeout;
@@ -20,19 +20,19 @@ function createTimeout(duration) {
     return [timeout, pending];
 }
 function assertOptions(options) {
-    requiredOptions.forEach((option) => {
-        const possibilities = option.split('|');
-        if (!possibilities.find((p) => options[p])) {
-            throw new Error('Missing SQS consumer option [' + possibilities.join(' or ') + '].');
+    requiredOptions.forEach(option => {
+        const possibilities = option.split("|");
+        if (!possibilities.find(p => options[p])) {
+            throw new Error("Missing SQS consumer option [" + possibilities.join(" or ") + "].");
         }
     });
     if (options.batchSize > 10 || options.batchSize < 1) {
-        throw new Error('SQS batchSize option must be between 1 and 10.');
+        throw new Error("SQS batchSize option must be between 1 and 10.");
     }
 }
 function isAuthenticationError(err) {
     if (err instanceof errors_1.SQSError) {
-        return (err.statusCode === 403 || err.code === 'CredentialsError');
+        return err.statusCode === 403 || err.code === "CredentialsError";
     }
     return false;
 }
@@ -62,12 +62,16 @@ class Consumer extends events_1.EventEmitter {
         this.stopped = true;
         this.batchSize = options.batchSize || 1;
         this.visibilityTimeout = options.visibilityTimeout;
-        this.terminateVisibilityTimeout = options.terminateVisibilityTimeout || false;
+        this.terminateVisibilityTimeout =
+            options.terminateVisibilityTimeout || false;
         this.waitTimeSeconds = options.waitTimeSeconds || 20;
-        this.authenticationErrorTimeout = options.authenticationErrorTimeout || 10000;
-        this.sqs = options.sqs || new SQS({
-            region: options.region || process.env.AWS_REGION || 'eu-west-1'
-        });
+        this.authenticationErrorTimeout =
+            options.authenticationErrorTimeout || 10000;
+        this.sqs =
+            options.sqs ||
+                new SQS({
+                    region: options.region || process.env.AWS_REGION || "eu-west-1"
+                });
         bind_1.autoBind(this);
     }
     static create(options) {
@@ -75,17 +79,17 @@ class Consumer extends events_1.EventEmitter {
     }
     async start() {
         if (this.stopped) {
-            debug('Starting consumer');
+            debug("Starting consumer");
             this.stopped = false;
             await this.poll();
         }
     }
     stop() {
-        debug('Stopping consumer');
+        debug("Stopping consumer");
         this.stopped = true;
     }
     async handleSqsResponse(response) {
-        debug('Received SQS response');
+        debug("Received SQS response");
         debug(response);
         if (response) {
             if (hasMessages(response)) {
@@ -96,20 +100,23 @@ class Consumer extends events_1.EventEmitter {
                 else {
                     await Promise.all(response.Messages.map(this.processMessage));
                 }
-                this.emit('response_processed');
+                this.emit("response_processed");
             }
             else {
-                this.emit('empty');
+                this.emit("empty");
             }
         }
-        await this.poll();
+        else {
+            this.emit("null_response");
+        }
+        // await this.poll();
     }
     async processMessage(message) {
-        this.emit('message_received', message);
+        this.emit("message_received", message);
         try {
             await this.executeHandler(message);
             await this.deleteMessage(message);
-            this.emit('message_processed', message);
+            this.emit("message_processed", message);
         }
         catch (err) {
             this.emitError(err, message);
@@ -118,31 +125,27 @@ class Consumer extends events_1.EventEmitter {
                     await this.terminateVisabilityTimeout(message);
                 }
                 catch (err) {
-                    this.emit('error', err, message);
+                    this.emit("error", err, message);
                 }
             }
         }
     }
     async receiveMessage(params) {
         try {
-            return await this.sqs
-                .receiveMessage(params)
-                .promise();
+            return await this.sqs.receiveMessage(params).promise();
         }
         catch (err) {
             throw toSQSError(err, `SQS receive message failed: ${err.message}`);
         }
     }
     async deleteMessage(message) {
-        debug('Deleting message %s', message.MessageId);
+        debug("Deleting message %s", message.MessageId);
         const deleteParams = {
             QueueUrl: this.queueUrl,
             ReceiptHandle: message.ReceiptHandle
         };
         try {
-            await this.sqs
-                .deleteMessage(deleteParams)
-                .promise();
+            await this.sqs.deleteMessage(deleteParams).promise();
         }
         catch (err) {
             throw toSQSError(err, `SQS delete message failed: ${err.message}`);
@@ -154,10 +157,7 @@ class Consumer extends events_1.EventEmitter {
         try {
             if (this.handleMessageTimeout) {
                 [timeout, pending] = createTimeout(this.handleMessageTimeout);
-                await Promise.race([
-                    this.handleMessage(message),
-                    pending
-                ]);
+                await Promise.race([this.handleMessage(message), pending]);
             }
             else {
                 await this.handleMessage(message);
@@ -187,21 +187,21 @@ class Consumer extends events_1.EventEmitter {
     }
     emitError(err, message) {
         if (err.name === errors_1.SQSError.name) {
-            this.emit('error', err, message);
+            this.emit("error", err, message);
         }
         else if (err instanceof errors_1.TimeoutError) {
-            this.emit('timeout_error', err, message);
+            this.emit("timeout_error", err, message);
         }
         else {
-            this.emit('processing_error', err, message);
+            this.emit("processing_error", err, message);
         }
     }
     async poll() {
         if (this.stopped) {
-            this.emit('stopped');
+            this.emit("stopped");
             return;
         }
-        debug('Polling for messages');
+        debug("Polling for messages");
         try {
             const receiveParams = {
                 QueueUrl: this.queueUrl,
@@ -215,38 +215,40 @@ class Consumer extends events_1.EventEmitter {
             await this.handleSqsResponse(response);
         }
         catch (err) {
-            this.emit('error', err);
+            this.emit("error", err);
             if (isAuthenticationError(err)) {
-                debug('There was an authentication error. Pausing before retrying.');
+                debug("There was an authentication error. Pausing before retrying.");
                 setTimeout(async () => this.poll(), await this.authenticationErrorTimeout);
             }
         }
     }
     async processMessageBatch(messages) {
-        messages.forEach((message) => {
-            this.emit('message_received', message);
+        this.emit("batch_message_received", messages);
+        messages.forEach(message => {
+            this.emit("message_received", message);
         });
         try {
             await this.executeBatchHandler(messages);
             await this.deleteMessageBatch(messages);
-            messages.forEach((message) => {
-                this.emit('message_processed', message);
+            this.emit("batch_message_processed", messages);
+            messages.forEach(message => {
+                this.emit("message_processed", message);
             });
         }
         catch (err) {
-            this.emit('error', err, messages);
+            this.emit("error", err, messages);
             if (this.terminateVisibilityTimeout) {
                 try {
                     await this.terminateVisabilityTimeoutBatch(messages);
                 }
                 catch (err) {
-                    this.emit('error', err, messages);
+                    this.emit("error", err, messages);
                 }
             }
         }
     }
     async deleteMessageBatch(messages) {
-        debug('Deleting messages %s', messages.map((msg) => msg.MessageId).join(' ,'));
+        debug("Deleting messages %s", messages.map(msg => msg.MessageId).join(" ,"));
         const deleteParams = {
             QueueUrl: this.queueUrl,
             Entries: messages.map(message => ({
@@ -255,9 +257,7 @@ class Consumer extends events_1.EventEmitter {
             }))
         };
         try {
-            await this.sqs
-                .deleteMessageBatch(deleteParams)
-                .promise();
+            await this.sqs.deleteMessageBatch(deleteParams).promise();
         }
         catch (err) {
             throw toSQSError(err, `SQS delete message failed: ${err.message}`);
@@ -275,15 +275,13 @@ class Consumer extends events_1.EventEmitter {
     async terminateVisabilityTimeoutBatch(messages) {
         const params = {
             QueueUrl: this.queueUrl,
-            Entries: messages.map((message) => ({
+            Entries: messages.map(message => ({
                 Id: message.MessageId,
                 ReceiptHandle: message.ReceiptHandle,
                 VisibilityTimeout: 0
             }))
         };
-        return this.sqs
-            .changeMessageVisibilityBatch(params)
-            .promise();
+        return this.sqs.changeMessageVisibilityBatch(params).promise();
     }
 }
 exports.Consumer = Consumer;
