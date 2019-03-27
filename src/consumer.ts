@@ -145,6 +145,16 @@ export class Consumer extends EventEmitter {
     }
   }
 
+  public async restart(): Promise<void> {
+    this.stop();
+    await this.start();
+    if (this.stopped) {
+      debug("Starting consumer");
+      this.stopped = false;
+      await this.poll();
+    }
+  }
+
   public stop(): void {
     debug("Stopping consumer");
     this.stopped = true;
@@ -172,8 +182,7 @@ export class Consumer extends EventEmitter {
     } else {
       this.emit("null_response");
     }
-
-    // await this.poll();
+    await this.poll();
   }
 
   private async processMessage(message: SQSMessage): Promise<void> {
@@ -274,6 +283,7 @@ export class Consumer extends EventEmitter {
     }
 
     debug("Polling for messages");
+    this.emit("polling");
     try {
       const receiveParams = {
         QueueUrl: this.queueUrl,

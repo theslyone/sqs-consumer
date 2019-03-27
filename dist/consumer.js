@@ -84,6 +84,15 @@ class Consumer extends events_1.EventEmitter {
             await this.poll();
         }
     }
+    async restart() {
+        this.stop();
+        await this.start();
+        if (this.stopped) {
+            debug("Starting consumer");
+            this.stopped = false;
+            await this.poll();
+        }
+    }
     stop() {
         debug("Stopping consumer");
         this.stopped = true;
@@ -110,7 +119,7 @@ class Consumer extends events_1.EventEmitter {
         else {
             this.emit("null_response");
         }
-        // await this.poll();
+        await this.poll();
     }
     async processMessage(message) {
         this.emit("message_received", message);
@@ -203,6 +212,7 @@ class Consumer extends events_1.EventEmitter {
             return;
         }
         debug("Polling for messages");
+        this.emit("polling");
         try {
             const receiveParams = {
                 QueueUrl: this.queueUrl,

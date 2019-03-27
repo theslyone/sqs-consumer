@@ -34,6 +34,7 @@ export declare class Consumer extends EventEmitter {
     constructor(options: ConsumerOptions);
     static create(options: ConsumerOptions): Consumer;
     start(): Promise<void>;
+    restart(): Promise<void>;
     stop(): void;
     private handleSqsResponse;
     private processMessage;
